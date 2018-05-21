@@ -1,3 +1,13 @@
+//-----------------------------------------------------------------------------------------
+//This code will be used to read in the file outputs from AMPT and parse them together.
+//This will allow me to reconstruct the parton evolution and make a scattering animation.
+//
+//File 1: parton-initial-afterPropagation.dat
+//File 2: parton-collisionHistory.dat
+//
+//05-21-18
+//------------------------------------------------------------------------------------------
+
 #include "TLatex.h"
 #include "TChain.h"
 #include "TH1.h"
@@ -28,4 +38,34 @@
 #include <vector>
 
 using namespace std;
+
+//---------------------------------
+//Structure for the Parton
+//---------------------------------
+
+struct parton {
+// Parton initial momentum
+	float px;
+	float py;
+	float px;
+
+// Parton initial location
+	float x;
+	float y;
+	float z;
+	float t;
+
+//Parton mass in GeV
+	float mass;
+
+}
+
+void myText(Double_t x,Double_t y,Color_t color,const char *text,Double_t tsize = 0.05,double angle=-1) {
+	TLatex l;
+	l.SetTextSize(tsize);
+	l.SetNDC();
+	l.SetTextColor(color);
+	if (angle > 0) l.SetTextAngle(angle);
+	l.DrawLatex(x,y,text);
+}
 
