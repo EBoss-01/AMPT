@@ -146,8 +146,6 @@ void EventAnimation(void) {
 
 			myInitialFileInfo >> partID >> momenta[0] >> momenta[1] >> momenta[2] >> mass >> spacetime[0] >> spacetime[1] >> spacetime[2] >> spacetime[3];
 
-			cout << partID << ", " << momenta[0] << ", " << momenta[1] << ", " << momenta[2] << ", " << mass << ", " << spacetime[0] << ", " << spacetime[1] << ", " << spacetime[2] << ", " << spacetime[3] << endl;
-
 			parton partinfo;
 			partinfo.px = momenta[0];
 			partinfo.py = momenta[1];
@@ -159,6 +157,11 @@ void EventAnimation(void) {
 			partinfo.t = spacetime[3];
 
 			PracticeVector.push_back(partinfo);
+		}
+
+		for (int j = 0; j < PracticeVector.size();j++) {
+			parton p = PracticeVector[j];
+			cout << p.px << endl;
 		}
 	}
 
