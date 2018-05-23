@@ -161,14 +161,8 @@ void EventAnimation(void) {
 			vector<parton> auxillary;
 			auxillary.push_back(partinfo);
 			EventPartons.push_back(auxillary);
-
-			//PracticeVector.push_back(partinfo);
 		}
 
-		/*for (int j = 0; j < PracticeVector.size();j++) {
-			parton p = PracticeVector[j];
-			cout << p.px << endl;
-		}*/
 		//-------------------------------------------
 		// Additional variables for evolution
 		//-------------------------------------------
@@ -196,53 +190,55 @@ void EventAnimation(void) {
 		float parton2_final_mass;
 		double parton2_final_spacetime[4];
 
-
-
 		while (std::getline(myEvolutionFile,line)) {
-			stringstream heading(line);
 
+			if (!myEvolutionFile) break;
+			
+			stringstream heading(line);
 			string description;
 
 			if (heading >> description >> evt >> junk1 >> partonindex1 >> partonindex2) {
 
 				cout << "Event number = " << evt << endl;
 
-				continue;
+				if (evt == eventnumber) {
+
+					myEvolutionFile >> parton1_id_initial >> parton1_momenta_initial[0] >> parton1_momenta_initial[1] >> parton1_momenta_initial[2] >> parton1_mass_initial >> parton1_spacetime_initial[0] >> parton1_spacetime_initial[1] >> parton1_spacetime_initial[2] >> parton1_spacetime_initial[3];
+
+					myEvolutionFile >> parton2_id_initial >> parton2_momenta_initial[0] >> parton2_momenta_initial[1] >> parton2_momenta_initial[2] >> parton2_mass_initial >> parton2_spacetime_initial[0] >> parton2_spacetime_initial[1] >> parton2_spacetime_initial[2] >> parton2_spacetime_initial[3];
+
+					myEvolutionFile >> parton1_final_id >> parton1_final_momenta[0] >> parton1_final_momenta[1] >> parton1_final_momenta[2] >> parton1_final_mass >> parton1_final_spacetime[0] >> parton1_final_spacetime[1] >> parton1_final_spacetime[2] >> parton1_final_spacetime[3];
+
+					myEvolutionFile >> parton2_final_id >> parton2_final_momenta[0] >> parton2_final_momenta[1] >> parton2_final_momenta[2] >> parton2_final_mass >> parton2_final_spacetime[0] >> parton2_final_spacetime[1] >> parton2_final_spacetime[2] >> parton2_final_spacetime[3];
+
+					parton part1;
+					part1.px = parton1_final_momenta[0];
+					part1.py = parton1_final_momenta[1];
+					part1.pz = parton1_final_momenta[2];
+					part1.x = parton1_final_spacetime[0];
+					part1.y = parton1_final_spacetime[1];
+					part1.z = parton1_final_spacetime[2];
+					part1.t = parton1_final_spacetime[3];
+					part1.m = parton1_final_mass;
+
+					parton part2;
+					part2.px = parton2_final_momenta[0];
+					part2.py = parton2_final_momenta[1];
+					part2.pz = parton2_final_momenta[2];
+					part2.x = parton2_final_spacetime[0];
+					part2.y = parton2_final_spacetime[1];
+					part2.z = parton2_final_spacetime[2];
+					part2.t = parton2_final_spacetime[3];
+					part2.m = parton2_final_mass;
+
+					EventPartons[partonindex1 - 1].push_back(part1);
+					EventPartons[partonindex2 - 1].push_back(part2);
+				}
 			}
-
-			myEvolutionFile >> parton1_id_initial >> parton1_momenta_initial[0] >> parton1_momenta_initial[1] >> parton1_momenta_initial[2] >> parton1_mass_initial >> parton1_spacetime_initial[0] >> parton1_spacetime_initial[1] >> parton1_spacetime_initial[2] >> parton1_spacetime_initial[3];
-
-			myEvolutionFile >> parton2_id_initial >> parton2_momenta_initial[0] >> parton2_momenta_initial[1] >> parton2_momenta_initial[2] >> parton2_mass_initial >> parton2_spacetime_initial[0] >> parton2_spacetime_initial[1] >> parton2_spacetime_initial[2] >> parton2_spacetime_initial[3];
-
-			myEvolutionFile >> parton1_final_id >> parton1_final_momenta[0] >> parton1_final_momenta[1] >> parton1_final_momenta[2] >> parton1_final_mass >> parton1_final_spacetime[0] >> parton1_final_spacetime[1] >> parton1_final_spacetime[2] >> parton1_final_spacetime[3];
-
-			myEvolutionFile >> parton2_final_id >> parton2_final_momenta[0] >> parton2_final_momenta[1] >> parton2_final_momenta[2] >> parton2_final_mass >> parton2_final_spacetime[0] >> parton2_final_spacetime[1] >> parton2_final_spacetime[2] >> parton2_final_spacetime[3];
-
-
-			parton part1;
-			part1.px = parton1_final_momenta[0];
-			part1.py = parton1_final_momenta[1];
-			part1.pz = parton1_final_momenta[2];
-			part1.x = parton1_final_spacetime[0];
-			part1.y = parton1_final_spacetime[1];
-			part1.z = parton1_final_spacetime[2];
-			part1.t = parton1_final_spacetime[3];
-			part1.m = parton1_final_mass;
-
-			parton part2;
-			part2.px = parton2_final_momenta[0];
-			part2.py = parton2_final_momenta[1];
-			part2.pz = parton2_final_momenta[2];
-			part2.x = parton2_final_spacetime[0];
-			part2.y = parton2_final_spacetime[1];
-			part2.z = parton2_final_spacetime[2];
-			part2.t = parton2_final_spacetime[3];
-			part2.m = parton2_final_mass;
-
-			myEvolutionFile.close();
 		}
 	}
 
+	myEvolutionFile.close();
 	myInitialFileInfo.close();
 	return;
 }
