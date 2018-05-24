@@ -28,6 +28,7 @@ void filetest () {
 			if (j > 0) {
 
 				xposition[j] = xposition[j-1] * time[j];
+				yposition[j] = yposition[j-1] * time[j];
 
 				//cout << "calculated position: " << xposition[j] << endl;
 			}
