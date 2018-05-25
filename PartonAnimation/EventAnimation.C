@@ -76,6 +76,10 @@ vector<vector<parton> > EventPartons;
 // This is my practice vector to be certain that my filling is working as intended.
 vector<parton> PracticeVector;
 
+// Time step in fm/c
+float dt = 0.0005;
+float NStep = 600;
+
 //----------------------------------
 //Functions
 //----------------------------------
@@ -87,6 +91,119 @@ void myText(Double_t x,Double_t y,Color_t color,const char *text,Double_t tsize 
 	l.SetTextColor(color);
 	if (angle > 0) l.SetTextAngle(angle);
 	l.DrawLatex(x,y,text);
+}
+
+// This function is used to determine the stage that will be used for each part of the calculation.
+int getStage(float actualtime, vector<parton> v) {
+
+	if (actualtime < v[0].t) return -999;
+
+	for (int i = 0; i < v.size(); i++) {
+
+		if (actualtime > v[i].t && actualtime <= v[i+1].t) {
+
+			return i;
+		}
+	}
+
+	if (actualtime > v[v.size()-1].t) {
+		return v.size()-1;
+	}
+
+	return 0;
+}
+
+// This function is used to do the position calculations and will return x,y coordinates at every time.
+void calculatePosition (float actualtime, vector<parton> v, float &xt, float &yt) {
+
+	float xposition[v.size()];
+	float yposition[v.size()];
+	float xvelocity[v.size()];
+	float yvelocity[v.size()];
+	float x0, y0;
+
+	for (int i = 0; i < v.size(); i++) {
+		// Calculation of the velocity at each stage.
+		float energy = TMath::Sqrt(pow(v[i].px,2) + pow(v[i].py,2) + pow(v[i].pz,2) + pow(v[i].m,2));
+		TLorentzVector ev(v[i].px, v[i].py, v[i].pz, energy);
+		float beta = ev.Beta();
+		float phi = ev.Phi();
+		xvelocity[i] = beta * TMath::Cos(phi);
+		yvelocity[i] = beta * TMath::Sin(phi);
+
+
+		// Determine the initial position of the parton.
+		if (i == 0) {
+
+			x0 = v[i].x;
+			y0 = v[i].y;
+
+			xposition[i] = x0;
+			yposition[i] = y0;
+		}
+		else {
+			//cout << "+++ " << stage << "   " << xvelocity[stage-1] << endl;
+
+			x0 = xposition[i-1] + xvelocity[i-1] * (v[i].t - v[i-1].t);
+			y0 = yposition[i-1] + yvelocity[i-1] * (v[i].t - v[i-1].t);
+
+			xposition[i] = x0;
+			yposition[i] = y0;
+		}
+	}
+
+	// Call getStage function to determine the stages for every time.
+	int stage = getStage(actualtime,v);
+	if (stage < 0) {
+		xt =-999;
+		yt=-999;
+		return;
+	}
+
+	//cout << stage << endl << endl;
+
+	actualtime = actualtime - v[stage].t;
+
+	//cout << "--- " << stage << "   " << xvelocity[stage] << endl;
+
+
+	// Calculating the positions as a function of time.
+	xt = xposition[stage] + (xvelocity[stage] * actualtime);
+	yt = yposition[stage] + (yvelocity[stage] * actualtime);
+}
+
+// This function will loop over each parton and then calculate the positions at every given moment in time. 
+void processEvent() {
+
+	// This loops through each time.
+	for (int i = 0; i < NStep; i++) {
+
+		float actualtime = i * dt;
+		//float x[EventPartons.size()];
+		//float y[EventPartons.size()];
+
+		std::vector<parton> v = EventPartons[0];
+
+		float xt, yt;
+		calculatePosition(actualtime,EventPartons[0],xt,yt);
+		cout << "{" << xt << "," << yt << "}," << endl;
+
+		/*
+		// Put Parton Loop here
+		for (int p = 0; p < EventPartons.size(); p++) {
+
+			std::vector<parton> v = EventPartons[p];
+
+			float xt, yt;
+			calculatePosition(actualtime,v,xt,yt);
+			if(p==0)
+			{
+				cout << "{" << xt << "," << yt << "}," << endl;
+			}
+		}
+		*/
+
+	}
 }
 
 // This will be my attempt to read in the files that I will be using. 
@@ -199,8 +316,6 @@ void EventAnimation(void) {
 
 			if (heading >> description >> evt >> junk1 >> partonindex1 >> partonindex2) {
 
-				cout << "Event number = " << evt << endl;
-
 				if (evt == eventnumber) {
 
 					myEvolutionFile >> parton1_id_initial >> parton1_momenta_initial[0] >> parton1_momenta_initial[1] >> parton1_momenta_initial[2] >> parton1_mass_initial >> parton1_spacetime_initial[0] >> parton1_spacetime_initial[1] >> parton1_spacetime_initial[2] >> parton1_spacetime_initial[3];
@@ -236,6 +351,27 @@ void EventAnimation(void) {
 				}
 			}
 		}
+
+		// Call function that Processes the Event.
+		processEvent();
+
+/*
+		for(int i=0; i<40; i++)
+		{
+			std::vector<parton> parton_history = EventPartons[i];
+
+			cout << "---> PARTON " << i+1 << " ---------" << endl;
+
+			for(int j=0; j<parton_history.size(); j++)
+			{
+				parton p = parton_history[j];
+
+				cout << Form("px %i step = %f", j, p.px) << endl;
+				cout << Form("py %i step = %f", j, p.py) << endl;
+			}
+
+		}
+		*/
 	}
 
 	myEvolutionFile.close();
