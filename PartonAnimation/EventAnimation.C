@@ -76,6 +76,10 @@ vector<vector<parton> > EventPartons;
 // This is my practice vector to be certain that my filling is working as intended.
 vector<parton> PracticeVector;
 
+// This vector will store the coordinates for each parton at every time. 
+vector<float> xvals;
+vector<float> yvals;
+
 // Time step in fm/c
 float dt = 0.0005;
 float NStep = 600;
@@ -111,6 +115,27 @@ int getStage(float actualtime, vector<parton> v) {
 	}
 
 	return 0;
+}
+
+// This function is used to produce all the different histograms for each time step.
+void draw(vector<float> x, vector<float> y, int iterate) {
+
+	cout << "+++++++++++++++++" << iterate << endl;
+
+	TCanvas* c = new TCanvas(Form("c_%i", iterate),Form("c_%i", iterate),800,600);
+
+	TH2F* hTimestep = new TH2F(Form("hTimestep_[%i]", iterate), "x [fm]; y [fm]", 200, -2.5, 2.5, 200, -2.5, 2.5);
+
+	hTimestep->Draw();
+
+	for (int j = 0; j < x.size(); j++) {
+		TEllipse *tell = new TEllipse(x[j], y[j],0.09,0.09);
+		tell->SetFillColor(kBlue);
+		tell->Draw("same");
+	}
+
+	c->SaveAs(Form("frametest/Iteration_%i.png", iterate));
+
 }
 
 // This function is used to do the position calculations and will return x,y coordinates at every time.
@@ -175,8 +200,10 @@ void calculatePosition (float actualtime, vector<parton> v, float &xt, float &yt
 // This function will loop over each parton and then calculate the positions at every given moment in time. 
 void processEvent() {
 
+	int iterate = 0;
+
 	// This loops through each time.
-	for (int i = 0; i < NStep; i++) {
+	for (int i = 500; i < NStep; i++) {
 
 		float actualtime = i * dt;
 		//float x[EventPartons.size()];
@@ -185,11 +212,20 @@ void processEvent() {
 		std::vector<parton> v = EventPartons[0];
 
 		float xt, yt;
+
 		calculatePosition(actualtime,EventPartons[0],xt,yt);
 		cout << "{" << xt << "," << yt << "}," << endl;
 
-		/*
+		xvals.push_back(xt);
+		yvals.push_back(yt);
+
+		draw(xvals, yvals, iterate);
+
+		cout << "------------" << iterate << endl;
+		iterate++;
+
 		// Put Parton Loop here
+		/*
 		for (int p = 0; p < EventPartons.size(); p++) {
 
 			std::vector<parton> v = EventPartons[p];
@@ -202,6 +238,9 @@ void processEvent() {
 			}
 		}
 		*/
+
+		xvals.clear();
+		yvals.clear();
 
 	}
 }
