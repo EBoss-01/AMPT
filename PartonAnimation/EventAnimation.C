@@ -81,8 +81,8 @@ vector<float> xvals;
 vector<float> yvals;
 
 // Time step in fm/c
-float dt = 0.0005;
-float NStep = 600;
+float dt = 0.05;
+float NStep = 100;
 
 //----------------------------------
 //Functions
@@ -122,9 +122,13 @@ void draw(vector<float> x, vector<float> y, int iterate) {
 
 	cout << "+++++++++++++++++" << iterate << endl;
 
-	TCanvas* c = new TCanvas(Form("c_%i", iterate),Form("c_%i", iterate),800,600);
+	TCanvas* c = new TCanvas(Form("c_%i", iterate),Form("c_%i", iterate),480,480);
+	gStyle->SetOptStat(0);
 
-	TH2F* hTimestep = new TH2F(Form("hTimestep_[%i]", iterate), "x [fm]; y [fm]", 200, -2.5, 2.5, 200, -2.5, 2.5);
+	c->SetTickx();
+	c->SetTicky();
+
+	TH2F* hTimestep = new TH2F(Form("hTimestep_[%i]", iterate), ";x [fm]; y [fm]", 100, -2.5, 2.5, 100, -2.5, 2.5);
 
 	hTimestep->Draw();
 
@@ -199,48 +203,45 @@ void calculatePosition (float actualtime, vector<parton> v, float &xt, float &yt
 
 // This function will loop over each parton and then calculate the positions at every given moment in time. 
 void processEvent() {
-
 	int iterate = 0;
 
+
 	// This loops through each time.
-	for (int i = 500; i < NStep; i++) {
+	for (int i = 0; i < NStep; i++) {
 
 		float actualtime = i * dt;
 		//float x[EventPartons.size()];
 		//float y[EventPartons.size()];
 
-		std::vector<parton> v = EventPartons[0];
+		//std::vector<parton> v = EventPartons[0];
 
-		float xt, yt;
+		//float xt, yt;
 
-		calculatePosition(actualtime,EventPartons[0],xt,yt);
-		cout << "{" << xt << "," << yt << "}," << endl;
-
-		xvals.push_back(xt);
-		yvals.push_back(yt);
-
-		draw(xvals, yvals, iterate);
-
-		cout << "------------" << iterate << endl;
-		iterate++;
+		//calculatePosition(actualtime,EventPartons[0],xt,yt);
+		//cout << "{" << xt << "," << yt << "}," << endl;
 
 		// Put Parton Loop here
-		/*
+		
 		for (int p = 0; p < EventPartons.size(); p++) {
 
 			std::vector<parton> v = EventPartons[p];
 
 			float xt, yt;
 			calculatePosition(actualtime,v,xt,yt);
-			if(p==0)
-			{
-				cout << "{" << xt << "," << yt << "}," << endl;
-			}
+
+			cout << "{" << xt << "," << yt << "}," << endl;
+
+			xvals.push_back(xt);
+			yvals.push_back(yt);
 		}
-		*/
+
+		draw(xvals, yvals, iterate);
+
+		cout << "------------" << iterate << endl;
 
 		xvals.clear();
 		yvals.clear();
+		iterate++;
 
 	}
 }
