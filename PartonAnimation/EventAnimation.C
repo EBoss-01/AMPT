@@ -79,6 +79,7 @@ vector<parton> PracticeVector;
 // This vector will store the coordinates for each parton at every time. 
 vector<float> xvals;
 vector<float> yvals;
+vector<int> goesboom;
 
 // Time step in fm/c
 float dt = 0.05;
@@ -118,7 +119,7 @@ int getStage(float actualtime, vector<parton> v) {
 }
 
 // This function is used to produce all the different histograms for each time step.
-void draw(vector<float> x, vector<float> y, int iterate) {
+void draw(vector<float> x, vector<float> y, int iterate, vector<int> bigboom) {
 
 	cout << "+++++++++++++++++" << iterate << endl;
 
@@ -128,22 +129,34 @@ void draw(vector<float> x, vector<float> y, int iterate) {
 	c->SetTickx();
 	c->SetTicky();
 
-	TH2F* hTimestep = new TH2F(Form("hTimestep_[%i]", iterate), ";x [fm]; y [fm]", 100, -2.5, 2.5, 100, -2.5, 2.5);
-
+	TH2F* hTimestep = new TH2F(Form("hTimestep_[%i]", iterate), Form("hTimestep_%i", iterate), 100, -2.5, 2.5, 100, -2.5, 2.5);
+	hTimestep->SetTitle("");
+	hTimestep->GetXaxis()->SetTitle("x [fm]");
+	hTimestep->GetYaxis()->SetTitle("y [fm]");
 	hTimestep->Draw();
 
 	for (int j = 0; j < x.size(); j++) {
 		TEllipse *tell = new TEllipse(x[j], y[j],0.09,0.09);
 		tell->SetFillColor(kBlue);
 		tell->Draw("same");
+
+		if (bigboom[j] > 0) {
+			tell->SetFillColor(kRed);
+			tell->Draw("same");
+		}
 	}
 
-	c->SaveAs(Form("frametest/Iteration_%i.png", iterate));
+	if (iterate < 10) {
+		c->SaveAs(Form("frame_test/Iteration_00%i.png", iterate));
+	}
+	else if (iterate >= 10 && iterate < 100) {
+		c->SaveAs(Form("frame_test/Iteration_0%i.png", iterate));
+	}
 
 }
 
 // This function is used to do the position calculations and will return x,y coordinates at every time.
-void calculatePosition (float actualtime, vector<parton> v, float &xt, float &yt) {
+void calculatePosition (float actualtime, vector<parton> v, float &xt, float &yt, int &boom) {
 
 	float xposition[v.size()];
 	float yposition[v.size()];
@@ -199,26 +212,17 @@ void calculatePosition (float actualtime, vector<parton> v, float &xt, float &yt
 	// Calculating the positions as a function of time.
 	xt = xposition[stage] + (xvelocity[stage] * actualtime);
 	yt = yposition[stage] + (yvelocity[stage] * actualtime);
+	boom = stage;
 }
 
 // This function will loop over each parton and then calculate the positions at every given moment in time. 
 void processEvent() {
 	int iterate = 0;
 
-
 	// This loops through each time.
 	for (int i = 0; i < NStep; i++) {
 
 		float actualtime = i * dt;
-		//float x[EventPartons.size()];
-		//float y[EventPartons.size()];
-
-		//std::vector<parton> v = EventPartons[0];
-
-		//float xt, yt;
-
-		//calculatePosition(actualtime,EventPartons[0],xt,yt);
-		//cout << "{" << xt << "," << yt << "}," << endl;
 
 		// Put Parton Loop here
 		
@@ -227,20 +231,23 @@ void processEvent() {
 			std::vector<parton> v = EventPartons[p];
 
 			float xt, yt;
-			calculatePosition(actualtime,v,xt,yt);
+			int boom;
+			calculatePosition(actualtime,v,xt,yt,boom);
 
 			cout << "{" << xt << "," << yt << "}," << endl;
 
 			xvals.push_back(xt);
 			yvals.push_back(yt);
+			goesboom.push_back(boom);
 		}
 
-		draw(xvals, yvals, iterate);
+		draw(xvals, yvals, iterate, goesboom);
 
 		cout << "------------" << iterate << endl;
 
 		xvals.clear();
 		yvals.clear();
+		goesboom.clear();
 		iterate++;
 
 	}
