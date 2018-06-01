@@ -30,6 +30,7 @@
 #include "TEllipse.h"
 #include "TColor.h"
 #include "TPaletteAxis.h"
+#include "TTree.h"
 
 #include <iostream>
 #include <fstream>
@@ -38,6 +39,13 @@
 #include <vector>
 
 using namespace std;
+
+//---------------------------------
+// TTree Creation
+//---------------------------------
+
+TFile* f1 = NULL;
+TTree *tree = NULL;
 
 //---------------------------------
 //Structure for the Parton
@@ -59,6 +67,7 @@ struct parton {
 	float m;
 
 };
+
 
 //----------------------------------
 // Variables
@@ -121,7 +130,7 @@ int getStage(float actualtime, vector<parton> v) {
 // This function is used to produce all the different histograms for each time step.
 void draw(vector<float> x, vector<float> y, int iterate, vector<int> bigboom) {
 
-	cout << "+++++++++++++++++" << iterate << endl;
+	//cout << "+++++++++++++++++" << iterate << endl;
 
 	TCanvas* c = new TCanvas(Form("c_%i", iterate),Form("c_%i", iterate),480,480);
 	gStyle->SetOptStat(0);
@@ -152,11 +161,14 @@ void draw(vector<float> x, vector<float> y, int iterate, vector<int> bigboom) {
 	else if (iterate >= 10 && iterate < 100) {
 		c->SaveAs(Form("frame_test/Iteration_0%i.png", iterate));
 	}
+	else if (iterate >= 100) {
+		c->SaveAs(Form("frame_test/Iteration_%i.png", iterate));
+	}
 
 }
 
 // This function is used to do the position calculations and will return x,y coordinates at every time.
-void calculatePosition (float actualtime, vector<parton> v, float &xt, float &yt, int &boom) {
+void calculatePosition (float actualtime, vector<parton> v, float &xt, float &yt, int &boom, float &initialpx, float &initialpy, float &initialpz, float &formationt, float &initialx, float &initialy, float &initialz, int &scatteringn, float scatteringpx[], float scatteringpy[], float scatteringpz[], float scatteringt[], float scatteringx[], float scatteringy[], float scatteringz[]) {
 
 	float xposition[v.size()];
 	float yposition[v.size()];
@@ -173,6 +185,8 @@ void calculatePosition (float actualtime, vector<parton> v, float &xt, float &yt
 		xvelocity[i] = beta * TMath::Cos(phi);
 		yvelocity[i] = beta * TMath::Sin(phi);
 
+		scatteringn = v.size()-1;
+
 
 		// Determine the initial position of the parton.
 		if (i == 0) {
@@ -182,6 +196,14 @@ void calculatePosition (float actualtime, vector<parton> v, float &xt, float &yt
 
 			xposition[i] = x0;
 			yposition[i] = y0;
+
+			initialpx = v[i].px;
+			initialpy = v[i].py;
+			initialpz = v[i].pz;
+			formationt = v[i].t;
+			initialx = x0;
+			initialy = y0;
+			initialz = v[i].z;
 		}
 		else {
 			//cout << "+++ " << stage << "   " << xvelocity[stage-1] << endl;
@@ -191,8 +213,17 @@ void calculatePosition (float actualtime, vector<parton> v, float &xt, float &yt
 
 			xposition[i] = x0;
 			yposition[i] = y0;
+
+			scatteringpx[i-1] = v[i].px;
+			scatteringpy[i-1] = v[i].py;
+			scatteringpz[i-1] = v[i].pz;
+			scatteringt[i-1] = v[i].t;
+			scatteringx[i-1] = xposition[i];
+			scatteringy[i-1] = yposition[i];
+			scatteringz[i-1] = v[i].z;
 		}
 	}
+
 
 	// Call getStage function to determine the stages for every time.
 	int stage = getStage(actualtime,v);
@@ -200,6 +231,10 @@ void calculatePosition (float actualtime, vector<parton> v, float &xt, float &yt
 		xt =-999;
 		yt=-999;
 		return;
+	}
+
+	if (v.size() > 1 || stage==0) {
+		tree->Fill();
 	}
 
 	//cout << stage << endl << endl;
@@ -213,10 +248,11 @@ void calculatePosition (float actualtime, vector<parton> v, float &xt, float &yt
 	xt = xposition[stage] + (xvelocity[stage] * actualtime);
 	yt = yposition[stage] + (yvelocity[stage] * actualtime);
 	boom = stage;
+
 }
 
 // This function will loop over each parton and then calculate the positions at every given moment in time. 
-void processEvent() {
+void processEvent(float &initialpx, float &initialpy, float &initialpz, float &formationt, float &initialx, float &initialy, float &initialz, int &scatteringn, float scatteringpx[], float scatteringpy[], float scatteringpz[], float scatteringt[], float scatteringx[], float scatteringy[], float scatteringz[]) {
 	int iterate = 0;
 
 	// This loops through each time.
@@ -232,9 +268,9 @@ void processEvent() {
 
 			float xt, yt;
 			int boom;
-			calculatePosition(actualtime,v,xt,yt,boom);
+			calculatePosition(actualtime,v,xt,yt,boom,initialpx,initialpy,initialpz,formationt,initialx,initialy,initialz,scatteringn,scatteringpx,scatteringpy,scatteringpz,scatteringt,scatteringx,scatteringy,scatteringz);
 
-			cout << "{" << xt << "," << yt << "}," << endl;
+			//cout << "{" << xt << "," << yt << "}," << endl;
 
 			xvals.push_back(xt);
 			yvals.push_back(yt);
@@ -243,7 +279,7 @@ void processEvent() {
 
 		draw(xvals, yvals, iterate, goesboom);
 
-		cout << "------------" << iterate << endl;
+		//cout << "------------" << iterate << endl;
 
 		xvals.clear();
 		yvals.clear();
@@ -255,6 +291,43 @@ void processEvent() {
 
 // This will be my attempt to read in the files that I will be using. 
 void EventAnimation(void) {
+
+	f1 = new TFile("AMPT_File_Tree.root", "RECREATE");
+
+	Int_t scatteringn = 1000;
+	Int_t partonid;
+	Float_t initialpx;
+	Float_t initialpy;
+	Float_t initialpz;
+	Float_t formationt;
+	Float_t initialx;
+	Float_t initialy;
+	Float_t initialz;
+	Float_t scatteringpx[scatteringn];
+	Float_t scatteringpy[scatteringn];
+	Float_t scatteringpz[scatteringn];
+	Float_t scatteringt[scatteringn];
+	Float_t scatteringx[scatteringn];
+	Float_t scatteringy[scatteringn];
+	Float_t scatteringz[scatteringn];
+
+	tree = new TTree("tree", "An Orange Tree");
+	//tree->Branch("parton_id",&partonid,"parton_id/I");
+	tree->Branch("initial_px",&initialpx,"initial_px/F");
+	tree->Branch("initial_py",&initialpy,"initial_py/F");
+	tree->Branch("initial_pz",&initialpz,"initial_pz/F");
+	tree->Branch("formation_t",&formationt,"formation_t/F");
+	tree->Branch("initial_x",&initialx,"initial_x/F");
+	tree->Branch("initial_y",&initialy,"initial_y/F");
+	tree->Branch("initial_z",&initialz,"initial_z/F");
+	tree->Branch("scattering_n",&scatteringn,"scattering_n/I");
+	tree->Branch("scattering_px",scatteringpx,"scattering_px[scattering_n]/F");
+	tree->Branch("scattering_py",scatteringpy,"scattering_py[scattering_n]/F");
+	tree->Branch("scattering_pz",scatteringpz,"scattering_pz[scattering_n]/F");
+	tree->Branch("scattering_t",scatteringt,"scattering_t[scattering_n]/F");
+	tree->Branch("scattering_x",scatteringx,"scattering_x[scattering_n]/F");
+	tree->Branch("scattering_y",scatteringy,"scattering_y[scattering_n]/F");
+	tree->Branch("scattering_z",scatteringz,"scattering_z[scattering_n]/F");
 	ifstream myInitialFileInfo;
 	ifstream myEvolutionFile;
 
@@ -284,10 +357,10 @@ void EventAnimation(void) {
 
 	while (myInitialFileInfo) {
 
-		if (eventnumber % 100 == 0) {
+		/*if (eventnumber % 100 == 0) {
 
 			cout << "Reading Event Number " << eventnumber << endl;
-		}
+		}*/
 
 		// Information needed to read the event header.
 		int iterationN;
@@ -325,6 +398,7 @@ void EventAnimation(void) {
 			vector<parton> auxillary;
 			auxillary.push_back(partinfo);
 			EventPartons.push_back(auxillary);
+
 		}
 
 		//-------------------------------------------
@@ -400,26 +474,13 @@ void EventAnimation(void) {
 		}
 
 		// Call function that Processes the Event.
-		processEvent();
+		processEvent(initialpx,initialpy,initialpz,formationt,initialx,initialy,initialz,scatteringn,scatteringpx,scatteringpy,scatteringpz,scatteringt,scatteringx,scatteringy,scatteringz);
 
-/*
-		for(int i=0; i<40; i++)
-		{
-			std::vector<parton> parton_history = EventPartons[i];
-
-			cout << "---> PARTON " << i+1 << " ---------" << endl;
-
-			for(int j=0; j<parton_history.size(); j++)
-			{
-				parton p = parton_history[j];
-
-				cout << Form("px %i step = %f", j, p.px) << endl;
-				cout << Form("py %i step = %f", j, p.py) << endl;
-			}
-
-		}
-		*/
 	}
+
+	f1->Write();
+	f1->Close();
+
 
 	myEvolutionFile.close();
 	myInitialFileInfo.close();
