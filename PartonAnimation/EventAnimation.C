@@ -52,6 +52,8 @@ TTree *tree = NULL;
 //---------------------------------
 
 struct parton {
+// Parton ID
+	int pID;
 // Parton initial momentum
 	float px;
 	float py;
@@ -130,8 +132,7 @@ int getStage(float actualtime, vector<parton> v) {
 // This function is used to produce all the different histograms for each time step.
 void draw(vector<float> x, vector<float> y, int iterate, vector<int> bigboom) {
 
-	//cout << "+++++++++++++++++" << iterate << endl;
-
+	// This is where all the canvases that will be used are created.
 	TCanvas* c = new TCanvas(Form("c_%i", iterate),Form("c_%i", iterate),480,480);
 	gStyle->SetOptStat(0);
 
@@ -144,6 +145,7 @@ void draw(vector<float> x, vector<float> y, int iterate, vector<int> bigboom) {
 	hTimestep->GetYaxis()->SetTitle("y [fm]");
 	hTimestep->Draw();
 
+	// This loop is used to make the ellipse shape for the partons.
 	for (int j = 0; j < x.size(); j++) {
 		TEllipse *tell = new TEllipse(x[j], y[j],0.09,0.09);
 		tell->SetFillColor(kBlue);
@@ -155,6 +157,7 @@ void draw(vector<float> x, vector<float> y, int iterate, vector<int> bigboom) {
 		}
 	}
 
+	// These if statements are simply to ensure that the images will be saved in order allowing them to be animated.
 	if (iterate < 10) {
 		c->SaveAs(Form("frame_test/Iteration_00%i.png", iterate));
 	}
@@ -168,7 +171,7 @@ void draw(vector<float> x, vector<float> y, int iterate, vector<int> bigboom) {
 }
 
 // This function is used to do the position calculations and will return x,y coordinates at every time.
-void calculatePosition (float actualtime, vector<parton> v, float &xt, float &yt, int &boom, float &initialpx, float &initialpy, float &initialpz, float &formationt, float &initialx, float &initialy, float &initialz, int &scatteringn, float scatteringpx[], float scatteringpy[], float scatteringpz[], float scatteringt[], float scatteringx[], float scatteringy[], float scatteringz[]) {
+void calculatePosition (float actualtime, vector<parton> v, float &xt, float &yt, int &boom, int &partonid, float &initialpx, float &initialpy, float &initialpz, float &formationt, float &initialx, float &initialy, float &initialz, int &scatteringn, float scatteringpx[], float scatteringpy[], float scatteringpz[], float scatteringt[], float scatteringx[], float scatteringy[], float scatteringz[]) {
 
 	float xposition[v.size()];
 	float yposition[v.size()];
@@ -176,6 +179,7 @@ void calculatePosition (float actualtime, vector<parton> v, float &xt, float &yt
 	float yvelocity[v.size()];
 	float x0, y0;
 
+	// The v vector in this loop is looking at the scattering's for each individual parton so the size varies in length.
 	for (int i = 0; i < v.size(); i++) {
 		// Calculation of the velocity at each stage.
 		float energy = TMath::Sqrt(pow(v[i].px,2) + pow(v[i].py,2) + pow(v[i].pz,2) + pow(v[i].m,2));
@@ -197,6 +201,8 @@ void calculatePosition (float actualtime, vector<parton> v, float &xt, float &yt
 			xposition[i] = x0;
 			yposition[i] = y0;
 
+			// This is filling in the branch for initial conditions.
+			partonid = v[i].pID;
 			initialpx = v[i].px;
 			initialpy = v[i].py;
 			initialpz = v[i].pz;
@@ -204,6 +210,7 @@ void calculatePosition (float actualtime, vector<parton> v, float &xt, float &yt
 			initialx = x0;
 			initialy = y0;
 			initialz = v[i].z;
+
 		}
 		else {
 			//cout << "+++ " << stage << "   " << xvelocity[stage-1] << endl;
@@ -214,6 +221,7 @@ void calculatePosition (float actualtime, vector<parton> v, float &xt, float &yt
 			xposition[i] = x0;
 			yposition[i] = y0;
 
+			// This is filling in the branches for scattering.
 			scatteringpx[i-1] = v[i].px;
 			scatteringpy[i-1] = v[i].py;
 			scatteringpz[i-1] = v[i].pz;
@@ -233,16 +241,7 @@ void calculatePosition (float actualtime, vector<parton> v, float &xt, float &yt
 		return;
 	}
 
-	if (v.size() > 1 || stage==0) {
-		tree->Fill();
-	}
-
-	//cout << stage << endl << endl;
-
 	actualtime = actualtime - v[stage].t;
-
-	//cout << "--- " << stage << "   " << xvelocity[stage] << endl;
-
 
 	// Calculating the positions as a function of time.
 	xt = xposition[stage] + (xvelocity[stage] * actualtime);
@@ -252,15 +251,18 @@ void calculatePosition (float actualtime, vector<parton> v, float &xt, float &yt
 }
 
 // This function will loop over each parton and then calculate the positions at every given moment in time. 
-void processEvent(float &initialpx, float &initialpy, float &initialpz, float &formationt, float &initialx, float &initialy, float &initialz, int &scatteringn, float scatteringpx[], float scatteringpy[], float scatteringpz[], float scatteringt[], float scatteringx[], float scatteringy[], float scatteringz[]) {
+void processEvent(int &partonid, float &initialpx, float &initialpy, float &initialpz, float &formationt, float &initialx, float &initialy, float &initialz, int &scatteringn, float scatteringpx[], float scatteringpy[], float scatteringpz[], float scatteringt[], float scatteringx[], float scatteringy[], float scatteringz[]) {
+	
 	int iterate = 0;
+	// This counter used to prevent the tree from being filled more than it should be.
+	counter1 = 0;
 
 	// This loops through each time.
 	for (int i = 0; i < NStep; i++) {
 
 		float actualtime = i * dt;
 
-		// Put Parton Loop here
+		// Put Parton Loop here. At each timestep each parton is looped over. 
 		
 		for (int p = 0; p < EventPartons.size(); p++) {
 
@@ -268,18 +270,26 @@ void processEvent(float &initialpx, float &initialpy, float &initialpz, float &f
 
 			float xt, yt;
 			int boom;
-			calculatePosition(actualtime,v,xt,yt,boom,initialpx,initialpy,initialpz,formationt,initialx,initialy,initialz,scatteringn,scatteringpx,scatteringpy,scatteringpz,scatteringt,scatteringx,scatteringy,scatteringz);
-
-			//cout << "{" << xt << "," << yt << "}," << endl;
+			calculatePosition(actualtime,v,xt,yt,boom,partonid,initialpx,initialpy,initialpz,formationt,initialx,initialy,initialz,scatteringn,scatteringpx,scatteringpy,scatteringpz,scatteringt,scatteringx,scatteringy,scatteringz);
 
 			xvals.push_back(xt);
 			yvals.push_back(yt);
 			goesboom.push_back(boom);
+
+			counter1 = counter1;
+			counter1++;
+
+			// This statement is to ensure that the tree is only filled once for all partons.
+			if (counter1 <= EventPartons.size()) {
+				tree->Fill();
+			}
+			else {
+				continue;
+			}
 		}
 
 		draw(xvals, yvals, iterate, goesboom);
 
-		//cout << "------------" << iterate << endl;
 
 		xvals.clear();
 		yvals.clear();
@@ -312,7 +322,7 @@ void EventAnimation(void) {
 	Float_t scatteringz[scatteringn];
 
 	tree = new TTree("tree", "An Orange Tree");
-	//tree->Branch("parton_id",&partonid,"parton_id/I");
+	tree->Branch("parton_id",&partonid,"parton_id/I");
 	tree->Branch("initial_px",&initialpx,"initial_px/F");
 	tree->Branch("initial_py",&initialpy,"initial_py/F");
 	tree->Branch("initial_pz",&initialpz,"initial_pz/F");
@@ -386,6 +396,7 @@ void EventAnimation(void) {
 			myInitialFileInfo >> partID >> momenta[0] >> momenta[1] >> momenta[2] >> mass >> spacetime[0] >> spacetime[1] >> spacetime[2] >> spacetime[3];
 
 			parton partinfo;
+			partinfo.pID = partID;
 			partinfo.px = momenta[0];
 			partinfo.py = momenta[1];
 			partinfo.pz = momenta[2];
@@ -448,6 +459,7 @@ void EventAnimation(void) {
 					myEvolutionFile >> parton2_final_id >> parton2_final_momenta[0] >> parton2_final_momenta[1] >> parton2_final_momenta[2] >> parton2_final_mass >> parton2_final_spacetime[0] >> parton2_final_spacetime[1] >> parton2_final_spacetime[2] >> parton2_final_spacetime[3];
 
 					parton part1;
+					//part1.pID = parton1_final_id;
 					part1.px = parton1_final_momenta[0];
 					part1.py = parton1_final_momenta[1];
 					part1.pz = parton1_final_momenta[2];
@@ -458,6 +470,7 @@ void EventAnimation(void) {
 					part1.m = parton1_final_mass;
 
 					parton part2;
+					//part2.pID = parton2_final_id;
 					part2.px = parton2_final_momenta[0];
 					part2.py = parton2_final_momenta[1];
 					part2.pz = parton2_final_momenta[2];
@@ -474,7 +487,7 @@ void EventAnimation(void) {
 		}
 
 		// Call function that Processes the Event.
-		processEvent(initialpx,initialpy,initialpz,formationt,initialx,initialy,initialz,scatteringn,scatteringpx,scatteringpy,scatteringpz,scatteringt,scatteringx,scatteringy,scatteringz);
+		processEvent(partonid,initialpx,initialpy,initialpz,formationt,initialx,initialy,initialz,scatteringn,scatteringpx,scatteringpy,scatteringpz,scatteringt,scatteringx,scatteringy,scatteringz);
 
 	}
 
