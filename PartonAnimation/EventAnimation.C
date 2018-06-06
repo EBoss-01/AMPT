@@ -52,6 +52,8 @@ TTree *tree = NULL;
 //---------------------------------
 
 struct parton {
+// Event Number
+	int evtN;
 // Parton ID
 	int pID;
 // Parton initial momentum
@@ -130,17 +132,17 @@ int getStage(float actualtime, vector<parton> v) {
 }
 
 // This function is used to produce all the different histograms for each time step.
-void draw(vector<float> x, vector<float> y, int iterate, vector<int> bigboom) {
+void draw(vector<float> x, vector<float> y, int iterate, vector<int> bigboom, int &actualevent) {
 
 	// This is where all the canvases that will be used are created.
-	TCanvas* c = new TCanvas(Form("c_%i", iterate),Form("c_%i", iterate),480,480);
+	TCanvas* c = new TCanvas(Form("c_%i_%i", iterate, eventnumber),Form("c_%i_%i", iterate, eventnumber),480,480);
 	gStyle->SetOptStat(0);
 
 	c->SetTickx();
 	c->SetTicky();
 
-	TH2F* hTimestep = new TH2F(Form("hTimestep_[%i]", iterate), Form("hTimestep_%i", iterate), 100, -2.5, 2.5, 100, -2.5, 2.5);
-	hTimestep->SetTitle("");
+	TH2F* hTimestep = new TH2F(Form("hTimestep_[%i]_[%i]", iterate, eventnumber), Form("hTimestep_%i_%i", iterate, eventnumber), 200, -2.5, 2.5, 200, -2.5, 2.5);
+	hTimestep->SetTitle(Form("Event %i", eventnumber));
 	hTimestep->GetXaxis()->SetTitle("x [fm]");
 	hTimestep->GetYaxis()->SetTitle("y [fm]");
 	hTimestep->Draw();
@@ -155,23 +157,26 @@ void draw(vector<float> x, vector<float> y, int iterate, vector<int> bigboom) {
 			tell->SetFillColor(kRed);
 			tell->Draw("same");
 		}
+
+		/*TArrow *ar1 = new TArrow(x[j], y[j], x[j+1], y[j+1], 0.05,"|>");
+		ar1->Draw("same");*/
 	}
 
 	// These if statements are simply to ensure that the images will be saved in order allowing them to be animated.
 	if (iterate < 10) {
-		c->SaveAs(Form("frame_test/Iteration_00%i.png", iterate));
+		c->SaveAs(Form("frame/Event_%i_00%i.png", eventnumber, iterate));
 	}
 	else if (iterate >= 10 && iterate < 100) {
-		c->SaveAs(Form("frame_test/Iteration_0%i.png", iterate));
+		c->SaveAs(Form("frame/Event_%i_0%i.png", eventnumber, iterate));
 	}
 	else if (iterate >= 100) {
-		c->SaveAs(Form("frame_test/Iteration_%i.png", iterate));
+		c->SaveAs(Form("frame/Event_%i_%i.png", eventnumber, iterate));
 	}
 
 }
 
 // This function is used to do the position calculations and will return x,y coordinates at every time.
-void calculatePosition (float actualtime, vector<parton> v, float &xt, float &yt, int &boom, int &partonid, float &initialpx, float &initialpy, float &initialpz, float &formationt, float &initialx, float &initialy, float &initialz, int &scatteringn, float scatteringpx[], float scatteringpy[], float scatteringpz[], float scatteringt[], float scatteringx[], float scatteringy[], float scatteringz[]) {
+void calculatePosition (float actualtime, vector<parton> v, float &xt, float &yt, int &boom, int &actualevent, int &partonid, float &initialpx, float &initialpy, float &initialpz, float &formationt, float &initialx, float &initialy, float &initialz, int &scatteringn, float scatteringpx[], float scatteringpy[], float scatteringpz[], float scatteringt[], float scatteringx[], float scatteringy[], float scatteringz[]) {
 
 	float xposition[v.size()];
 	float yposition[v.size()];
@@ -202,6 +207,7 @@ void calculatePosition (float actualtime, vector<parton> v, float &xt, float &yt
 			yposition[i] = y0;
 
 			// This is filling in the branch for initial conditions.
+			actualevent = eventnumber;
 			partonid = v[i].pID;
 			initialpx = v[i].px;
 			initialpy = v[i].py;
@@ -251,11 +257,11 @@ void calculatePosition (float actualtime, vector<parton> v, float &xt, float &yt
 }
 
 // This function will loop over each parton and then calculate the positions at every given moment in time. 
-void processEvent(int &partonid, float &initialpx, float &initialpy, float &initialpz, float &formationt, float &initialx, float &initialy, float &initialz, int &scatteringn, float scatteringpx[], float scatteringpy[], float scatteringpz[], float scatteringt[], float scatteringx[], float scatteringy[], float scatteringz[]) {
+void processEvent(int &actualevent, int &partonid, float &initialpx, float &initialpy, float &initialpz, float &formationt, float &initialx, float &initialy, float &initialz, int &scatteringn, float scatteringpx[], float scatteringpy[], float scatteringpz[], float scatteringt[], float scatteringx[], float scatteringy[], float scatteringz[]) {
 	
 	int iterate = 0;
 	// This counter used to prevent the tree from being filled more than it should be.
-	counter1 = 0;
+	int counter1 = 0;
 
 	// This loops through each time.
 	for (int i = 0; i < NStep; i++) {
@@ -270,7 +276,7 @@ void processEvent(int &partonid, float &initialpx, float &initialpy, float &init
 
 			float xt, yt;
 			int boom;
-			calculatePosition(actualtime,v,xt,yt,boom,partonid,initialpx,initialpy,initialpz,formationt,initialx,initialy,initialz,scatteringn,scatteringpx,scatteringpy,scatteringpz,scatteringt,scatteringx,scatteringy,scatteringz);
+			calculatePosition(actualtime,v,xt,yt,boom,actualevent,partonid,initialpx,initialpy,initialpz,formationt,initialx,initialy,initialz,scatteringn,scatteringpx,scatteringpy,scatteringpz,scatteringt,scatteringx,scatteringy,scatteringz);
 
 			xvals.push_back(xt);
 			yvals.push_back(yt);
@@ -288,7 +294,7 @@ void processEvent(int &partonid, float &initialpx, float &initialpy, float &init
 			}
 		}
 
-		draw(xvals, yvals, iterate, goesboom);
+		draw(xvals, yvals, iterate, goesboom, actualevent);
 
 
 		xvals.clear();
@@ -297,14 +303,17 @@ void processEvent(int &partonid, float &initialpx, float &initialpy, float &init
 		iterate++;
 
 	}
+
+	EventPartons.clear();
 }
 
 // This will be my attempt to read in the files that I will be using. 
 void EventAnimation(void) {
 
-	f1 = new TFile("AMPT_File_Tree.root", "RECREATE");
+	f1 = new TFile("Multievent_AMPT_File_Tree.root", "RECREATE");
 
 	Int_t scatteringn = 1000;
+	Int_t actualevent;
 	Int_t partonid;
 	Float_t initialpx;
 	Float_t initialpy;
@@ -322,6 +331,7 @@ void EventAnimation(void) {
 	Float_t scatteringz[scatteringn];
 
 	tree = new TTree("tree", "An Orange Tree");
+	tree->Branch("event_number",&actualevent,"event_number/I");
 	tree->Branch("parton_id",&partonid,"parton_id/I");
 	tree->Branch("initial_px",&initialpx,"initial_px/F");
 	tree->Branch("initial_py",&initialpy,"initial_py/F");
@@ -341,29 +351,18 @@ void EventAnimation(void) {
 	ifstream myInitialFileInfo;
 	ifstream myEvolutionFile;
 
-	myInitialFileInfo.open("parton-initial-afterPropagation_1.dat");
+	myInitialFileInfo.open("parton-initial-afterPropagation.dat");
 
 	if (!myInitialFileInfo) {
 	// This will let me know if the file fails to open and specifically which file.
-		cout << "Unable to open file parton-initial-afterPropagation_1.dat" << endl;
+		cout << "Unable to open file parton-initial-afterPropagation.dat" << endl;
 		return;
 	}
 	else {
 	// I've added this piece simply to confirm that the file did indeed open.
-		cout << "Successfully opened parton-initial-afterPropagation_1.dat" << endl;
+		cout << "Successfully opened parton-initial-afterPropagation.dat" << endl;
 	}
 
-	myEvolutionFile.open("parton-collisionsHistory_1.dat");
-
-	if (!myEvolutionFile) {
-	// As before this will let me know if this specific file fails to open.
-		cout << "Unable to open file parton-collisionsHistory_1.dat" << endl;
-		return;
-	}
-	else {
-	// This is here simply to confirm that this file opened successfully as well.
-		cout << "Successfully opened parton-collisionsHistory_1.dat" << endl;
-	}
 
 	while (myInitialFileInfo) {
 
@@ -396,6 +395,7 @@ void EventAnimation(void) {
 			myInitialFileInfo >> partID >> momenta[0] >> momenta[1] >> momenta[2] >> mass >> spacetime[0] >> spacetime[1] >> spacetime[2] >> spacetime[3];
 
 			parton partinfo;
+			partinfo.evtN = eventnumber;
 			partinfo.pID = partID;
 			partinfo.px = momenta[0];
 			partinfo.py = momenta[1];
@@ -439,6 +439,19 @@ void EventAnimation(void) {
 		float parton2_final_mass;
 		double parton2_final_spacetime[4];
 
+		// This is where the evolution file is opened each time.
+		myEvolutionFile.open("parton-collisionsHistory.dat");
+
+		if (!myEvolutionFile) {
+		// As before this will let me know if this specific file fails to open.
+			cout << "Unable to open file parton-collisionsHistory.dat" << endl;
+			return;
+		}
+		else {
+		// This is here simply to confirm that this file opened successfully as well.
+			cout << "Successfully opened parton-collisionsHistory.dat" << endl;
+		}
+
 		while (std::getline(myEvolutionFile,line)) {
 
 			if (!myEvolutionFile) break;
@@ -459,7 +472,8 @@ void EventAnimation(void) {
 					myEvolutionFile >> parton2_final_id >> parton2_final_momenta[0] >> parton2_final_momenta[1] >> parton2_final_momenta[2] >> parton2_final_mass >> parton2_final_spacetime[0] >> parton2_final_spacetime[1] >> parton2_final_spacetime[2] >> parton2_final_spacetime[3];
 
 					parton part1;
-					//part1.pID = parton1_final_id;
+					part1.evtN = evt;
+					part1.pID = parton1_final_id;
 					part1.px = parton1_final_momenta[0];
 					part1.py = parton1_final_momenta[1];
 					part1.pz = parton1_final_momenta[2];
@@ -470,7 +484,8 @@ void EventAnimation(void) {
 					part1.m = parton1_final_mass;
 
 					parton part2;
-					//part2.pID = parton2_final_id;
+					part2.evtN = evt;
+					part2.pID = parton2_final_id;
 					part2.px = parton2_final_momenta[0];
 					part2.py = parton2_final_momenta[1];
 					part2.pz = parton2_final_momenta[2];
@@ -486,16 +501,17 @@ void EventAnimation(void) {
 			}
 		}
 
+		// This is where the evolution file is closed each time.
+		myEvolutionFile.close();
+
 		// Call function that Processes the Event.
-		processEvent(partonid,initialpx,initialpy,initialpz,formationt,initialx,initialy,initialz,scatteringn,scatteringpx,scatteringpy,scatteringpz,scatteringt,scatteringx,scatteringy,scatteringz);
+		processEvent(actualevent,partonid,initialpx,initialpy,initialpz,formationt,initialx,initialy,initialz,scatteringn,scatteringpx,scatteringpy,scatteringpz,scatteringt,scatteringx,scatteringy,scatteringz);
 
 	}
 
 	f1->Write();
 	f1->Close();
 
-
-	myEvolutionFile.close();
 	myInitialFileInfo.close();
 	return;
 }
