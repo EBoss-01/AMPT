@@ -157,9 +157,6 @@ void draw(vector<float> x, vector<float> y, int iterate, vector<int> bigboom, in
 			tell->SetFillColor(kRed);
 			tell->Draw("same");
 		}
-
-		/*TArrow *ar1 = new TArrow(x[j], y[j], x[j+1], y[j+1], 0.05,"|>");
-		ar1->Draw("same");*/
 	}
 
 	// These if statements are simply to ensure that the images will be saved in order allowing them to be animated.
@@ -175,8 +172,43 @@ void draw(vector<float> x, vector<float> y, int iterate, vector<int> bigboom, in
 
 }
 
+// This function is used to make a snapshot of all partons at their initial positions and show their momentum vectors.
+void singleFrameDraw(int &actualevent, float &initialpx, float &initialpy, float &initialx, float &initialy, int &scatteringn, TCanvas* c1, int counter1, TH2F* Collisionplots) {
+
+	if (counter1 == 1) {
+		Collisionplots->Draw();
+	}
+
+	else if (counter1 > 1) {
+		Collisionplots->Draw("same");
+	}
+
+	float phi = TMath::ATan2(initialpy,initialpx);
+	float Tmomentum = TMath::Sqrt(pow(initialpx,2)+pow(initialpy,2));
+	float x2 = initialx + (Tmomentum*TMath::Cos(phi));
+	float y2 = initialy + (Tmomentum*TMath::Sin(phi));
+	TArrow* ar1 = new TArrow(initialx,initialy,x2,y2,0.02,">");
+	ar1->Draw();
+	ar1->SetLineWidth(2);
+
+	for (int i = 0; i < EventPartons.size(); i++) {
+
+		TEllipse *tell2 = new TEllipse(initialx, initialy,0.09,0.09);
+
+		if (scatteringn == 0) {
+			tell2->SetFillColor(kBlue);
+			tell2->Draw("same");
+		}
+
+		if (scatteringn > 0) {
+			tell2->SetFillColor(kRed);
+			tell2->Draw("same");
+		}
+	}
+}
+
 // This function is used to do the position calculations and will return x,y coordinates at every time.
-void calculatePosition (float actualtime, vector<parton> v, float &xt, float &yt, int &boom, int &actualevent, int &partonid, float &initialpx, float &initialpy, float &initialpz, float &formationt, float &initialx, float &initialy, float &initialz, int &scatteringn, float scatteringpx[], float scatteringpy[], float scatteringpz[], float scatteringt[], float scatteringx[], float scatteringy[], float scatteringz[]) {
+void calculatePosition (float actualtime, vector<parton> v, float &xt, float &yt, int &boom, int &actualevent, int &partonid, float &initialpx, float &initialpy, float &initialpz, float &formationt, float &initialx, float &initialy, float &initialz, int &scatteringn, float scatteringpx[], float scatteringpy[], float scatteringpz[], float scatteringt[], float scatteringx[], float scatteringy[], float scatteringz[], TCanvas* c1) {
 
 	float xposition[v.size()];
 	float yposition[v.size()];
@@ -257,7 +289,7 @@ void calculatePosition (float actualtime, vector<parton> v, float &xt, float &yt
 }
 
 // This function will loop over each parton and then calculate the positions at every given moment in time. 
-void processEvent(int &actualevent, int &partonid, float &initialpx, float &initialpy, float &initialpz, float &formationt, float &initialx, float &initialy, float &initialz, int &scatteringn, float scatteringpx[], float scatteringpy[], float scatteringpz[], float scatteringt[], float scatteringx[], float scatteringy[], float scatteringz[]) {
+void processEvent(int &actualevent, int &partonid, float &initialpx, float &initialpy, float &initialpz, float &formationt, float &initialx, float &initialy, float &initialz, int &scatteringn, float scatteringpx[], float scatteringpy[], float scatteringpz[], float scatteringt[], float scatteringx[], float scatteringy[], float scatteringz[],TCanvas* c1, TH2F* Collisionplots) {
 	
 	int iterate = 0;
 	// This counter used to prevent the tree from being filled more than it should be.
@@ -276,7 +308,7 @@ void processEvent(int &actualevent, int &partonid, float &initialpx, float &init
 
 			float xt, yt;
 			int boom;
-			calculatePosition(actualtime,v,xt,yt,boom,actualevent,partonid,initialpx,initialpy,initialpz,formationt,initialx,initialy,initialz,scatteringn,scatteringpx,scatteringpy,scatteringpz,scatteringt,scatteringx,scatteringy,scatteringz);
+			calculatePosition(actualtime,v,xt,yt,boom,actualevent,partonid,initialpx,initialpy,initialpz,formationt,initialx,initialy,initialz,scatteringn,scatteringpx,scatteringpy,scatteringpz,scatteringt,scatteringx,scatteringy,scatteringz,c1);
 
 			xvals.push_back(xt);
 			yvals.push_back(yt);
@@ -291,6 +323,12 @@ void processEvent(int &actualevent, int &partonid, float &initialpx, float &init
 			}
 			else {
 				continue;
+			}
+
+			singleFrameDraw(actualevent,initialpx,initialpy,initialx,initialy,scatteringn,c1,counter1,Collisionplots);
+
+			if (counter1 == EventPartons.size()) {
+				c1->SaveAs(Form("Single_frame/Event_%i.png", eventnumber));
 			}
 		}
 
@@ -504,8 +542,21 @@ void EventAnimation(void) {
 		// This is where the evolution file is closed each time.
 		myEvolutionFile.close();
 
+		// This is a new canvas used for the single frame images.
+		TCanvas* c1 = new TCanvas(Form("c1_%i", eventnumber), Form("c1_%i", eventnumber),480,480);
+		gStyle->SetOptStat(0);
+
+		c1->SetTickx();
+		c1->SetTicky();
+
+		// Histograms used for the single frame images.
+		TH2F* Collisionplots = new TH2F(Form("Collisionplots_%i", eventnumber), Form("Collisionplots_%i", eventnumber),200, -2.5, 2.5, 200, -2.5, 2.5);
+		Collisionplots->SetTitle(Form("Event %i", eventnumber));
+		Collisionplots->GetXaxis()->SetTitle("x [fm]");
+		Collisionplots->GetYaxis()->SetTitle("y [fm]");
+
 		// Call function that Processes the Event.
-		processEvent(actualevent,partonid,initialpx,initialpy,initialpz,formationt,initialx,initialy,initialz,scatteringn,scatteringpx,scatteringpy,scatteringpz,scatteringt,scatteringx,scatteringy,scatteringz);
+		processEvent(actualevent,partonid,initialpx,initialpy,initialpz,formationt,initialx,initialy,initialz,scatteringn,scatteringpx,scatteringpy,scatteringpz,scatteringt,scatteringx,scatteringy,scatteringz,c1,Collisionplots);
 
 	}
 
