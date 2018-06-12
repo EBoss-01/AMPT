@@ -97,6 +97,7 @@ vector<int> goesboom;
 // Time step in fm/c
 float dt = 0.05;
 float NStep = 100;
+float Pi = 3.14159;
 
 //----------------------------------
 //Functions
@@ -175,6 +176,8 @@ void draw(vector<float> x, vector<float> y, int iterate, vector<int> bigboom, in
 // This function is used to make a snapshot of all partons at their initial positions and show their momentum vectors.
 void singleFrameDraw(int &actualevent, float &initialpx, float &initialpy, float &initialx, float &initialy, int &scatteringn, TCanvas* c1, int counter1, TH2F* Collisionplots) {
 
+	c1->cd();
+
 	if (counter1 == 1) {
 		Collisionplots->Draw();
 	}
@@ -205,10 +208,85 @@ void singleFrameDraw(int &actualevent, float &initialpx, float &initialpy, float
 			tell2->Draw("same");
 		}
 	}
+
+	if (counter1 == EventPartons.size()) {
+		c1->SaveAs(Form("Single_frame/Event_%i.png", eventnumber));
+	}
+}
+
+// This function will show what scattering angle applies to what parton.
+void angleDraw(int &actualevent, float &initialpx, float &initialpy, float &initialpz, float &formationt, float &initialx, float &initialy, float &initialmass, int &scatteringn, float scatteringpx[], float scatteringpy[], float scatteringpz[], float scatteringt[], int counter1, vector<parton> v, TCanvas* c2, TH2F* Angleplots) {
+	c2->cd();
+
+	if (counter1 == 1) {
+		Angleplots->Draw();
+	}
+
+	else if (counter1 > 1) {
+		Angleplots->Draw("same");
+	}
+
+	float scatangle = 0;
+
+	TEllipse *tell3 = new TEllipse(initialx, initialy,0.09,0.09);
+	tell3->SetFillColor(kBlue);
+	tell3->Draw("same");
+
+	if (scatteringn > 0) {
+		float energy2 = TMath::Sqrt(pow(initialpx,2) + pow(initialpy,2) + pow(initialpz,2) + pow(initialmass,2));
+		float energy3 = 0;
+		float energy4 = 0;
+
+		TLorentzVector v1(initialpx,initialpy,initialpz,energy2);
+
+		for (int j = 0; j < v.size(); j++) {
+
+			if (j == 0) {
+				energy3 = TMath::Sqrt(pow(scatteringpx[j],2) + pow(scatteringpy[j],2) + pow(scatteringpz[j],2) + pow(initialmass,2));
+				TLorentzVector v2(scatteringpx[j],scatteringpy[j],scatteringpz[j],energy3);
+
+				scatangle = v1.Angle(v2.Vect());
+			}
+
+			if (j > 0) {
+
+				energy3 = TMath::Sqrt(pow(scatteringpx[j],2) + pow(scatteringpy[j],2) + pow(scatteringpz[j],2) + pow(initialmass,2));
+				TLorentzVector v3(scatteringpx[j],scatteringpy[j],scatteringpz[j],energy3);
+				energy4 = TMath::Sqrt(pow(scatteringpx[j+1],2) + pow(scatteringpy[j+1],2) + pow(scatteringpz[j+1],2) + pow(initialmass,2));
+				TLorentzVector v4(scatteringpx[j+1],scatteringpy[j+1],scatteringpz[j+1],energy4);
+
+				scatangle = v3.Angle(v4.Vect());
+			}
+
+			if (scatangle < (Pi/6)) {
+				tell3->SetFillColor(kBlue-9);
+				tell3->Draw("same");
+			}
+
+			if (scatangle > (Pi/6) && scatangle < (Pi/3)) {
+				tell3->SetFillColor(kGreen+3);
+				tell3->Draw("same");
+			}
+
+			if (scatangle > (Pi/3) && scatangle < (Pi/2)) {
+				tell3->SetFillColor(kOrange+7);
+				tell3->Draw("same");
+			}
+
+			if (scatangle > (Pi/2)) {
+				tell3->SetFillColor(kRed);
+				tell3->Draw("same");
+			}
+		}
+	}
+
+	if (counter1 == EventPartons.size()) {
+		c2->SaveAs(Form("Angle/AngleEvent_%i.png", eventnumber));
+	}
 }
 
 // This function is used to do the position calculations and will return x,y coordinates at every time.
-void calculatePosition (float actualtime, vector<parton> v, float &xt, float &yt, int &boom, int &actualevent, int &partonid, float &initialpx, float &initialpy, float &initialpz, float &formationt, float &initialx, float &initialy, float &initialz, int &scatteringn, float scatteringpx[], float scatteringpy[], float scatteringpz[], float scatteringt[], float scatteringx[], float scatteringy[], float scatteringz[], TCanvas* c1) {
+void calculatePosition (float actualtime, vector<parton> v, float &xt, float &yt, int &boom, int &actualevent, int &partonid, float &initialpx, float &initialpy, float &initialpz, float &formationt, float &initialx, float &initialy, float &initialz, float &initialmass, int &scatteringn, float scatteringpx[], float scatteringpy[], float scatteringpz[], float scatteringt[], float scatteringx[], float scatteringy[], float scatteringz[], TCanvas* c1, TCanvas* c2) {
 
 	float xposition[v.size()];
 	float yposition[v.size()];
@@ -248,6 +326,7 @@ void calculatePosition (float actualtime, vector<parton> v, float &xt, float &yt
 			initialx = x0;
 			initialy = y0;
 			initialz = v[i].z;
+			initialmass = v[i].m;
 
 		}
 		else {
@@ -289,7 +368,7 @@ void calculatePosition (float actualtime, vector<parton> v, float &xt, float &yt
 }
 
 // This function will loop over each parton and then calculate the positions at every given moment in time. 
-void processEvent(int &actualevent, int &partonid, float &initialpx, float &initialpy, float &initialpz, float &formationt, float &initialx, float &initialy, float &initialz, int &scatteringn, float scatteringpx[], float scatteringpy[], float scatteringpz[], float scatteringt[], float scatteringx[], float scatteringy[], float scatteringz[],TCanvas* c1, TH2F* Collisionplots) {
+void processEvent(int &actualevent, int &partonid, float &initialpx, float &initialpy, float &initialpz, float &formationt, float &initialx, float &initialy, float &initialz, float &initialmass, int &scatteringn, float scatteringpx[], float scatteringpy[], float scatteringpz[], float scatteringt[], float scatteringx[], float scatteringy[], float scatteringz[],TCanvas* c1, TH2F* Collisionplots, TCanvas* c2, TH2F* Angleplots) {
 	
 	int iterate = 0;
 	// This counter used to prevent the tree from being filled more than it should be.
@@ -308,7 +387,7 @@ void processEvent(int &actualevent, int &partonid, float &initialpx, float &init
 
 			float xt, yt;
 			int boom;
-			calculatePosition(actualtime,v,xt,yt,boom,actualevent,partonid,initialpx,initialpy,initialpz,formationt,initialx,initialy,initialz,scatteringn,scatteringpx,scatteringpy,scatteringpz,scatteringt,scatteringx,scatteringy,scatteringz,c1);
+			calculatePosition(actualtime,v,xt,yt,boom,actualevent,partonid,initialpx,initialpy,initialpz,formationt,initialx,initialy,initialz,initialmass,scatteringn,scatteringpx,scatteringpy,scatteringpz,scatteringt,scatteringx,scatteringy,scatteringz,c1,c2);
 
 			xvals.push_back(xt);
 			yvals.push_back(yt);
@@ -316,6 +395,8 @@ void processEvent(int &actualevent, int &partonid, float &initialpx, float &init
 
 			counter1 = counter1;
 			counter1++;
+
+			angleDraw(actualevent,initialpx,initialpy,initialpz,formationt,initialx,initialy,initialmass,scatteringn,scatteringpx,scatteringpy,scatteringpz,scatteringt,counter1,v,c2,Angleplots);
 
 			// This statement is to ensure that the tree is only filled once for all partons.
 			if (counter1 <= EventPartons.size()) {
@@ -327,9 +408,6 @@ void processEvent(int &actualevent, int &partonid, float &initialpx, float &init
 
 			singleFrameDraw(actualevent,initialpx,initialpy,initialx,initialy,scatteringn,c1,counter1,Collisionplots);
 
-			if (counter1 == EventPartons.size()) {
-				c1->SaveAs(Form("Single_frame/Event_%i.png", eventnumber));
-			}
 		}
 
 		draw(xvals, yvals, iterate, goesboom, actualevent);
@@ -360,6 +438,7 @@ void EventAnimation(void) {
 	Float_t initialx;
 	Float_t initialy;
 	Float_t initialz;
+	Float_t initialmass;
 	Float_t scatteringpx[scatteringn];
 	Float_t scatteringpy[scatteringn];
 	Float_t scatteringpz[scatteringn];
@@ -378,6 +457,7 @@ void EventAnimation(void) {
 	tree->Branch("initial_x",&initialx,"initial_x/F");
 	tree->Branch("initial_y",&initialy,"initial_y/F");
 	tree->Branch("initial_z",&initialz,"initial_z/F");
+	tree->Branch("initial_m",&initialmass,"initial_m/F");
 	tree->Branch("scattering_n",&scatteringn,"scattering_n/I");
 	tree->Branch("scattering_px",scatteringpx,"scattering_px[scattering_n]/F");
 	tree->Branch("scattering_py",scatteringpy,"scattering_py[scattering_n]/F");
@@ -555,8 +635,20 @@ void EventAnimation(void) {
 		Collisionplots->GetXaxis()->SetTitle("x [fm]");
 		Collisionplots->GetYaxis()->SetTitle("y [fm]");
 
+		// New Canvas for scattering plots.
+		TCanvas* c2 = new TCanvas(Form("c2_%i",eventnumber), Form("c2_%i", eventnumber),480,480);
+		gStyle->SetOptStat(0);
+		c2->SetTickx();
+		c2->SetTicky();
+
+		// Histogram for scattering plots
+		TH2F* Angleplots = new TH2F(Form("Angleplots_%i", eventnumber), Form("Angleplots_%i", eventnumber),200,-2.5,2.5,200,-2.5,2.5);
+		Angleplots->SetTitle(Form("Event %i", eventnumber));
+		Angleplots->GetXaxis()->SetTitle("x [fm]");
+		Angleplots->GetYaxis()->SetTitle("y [fm]");
+
 		// Call function that Processes the Event.
-		processEvent(actualevent,partonid,initialpx,initialpy,initialpz,formationt,initialx,initialy,initialz,scatteringn,scatteringpx,scatteringpy,scatteringpz,scatteringt,scatteringx,scatteringy,scatteringz,c1,Collisionplots);
+		processEvent(actualevent,partonid,initialpx,initialpy,initialpz,formationt,initialx,initialy,initialz,initialmass,scatteringn,scatteringpx,scatteringpy,scatteringpz,scatteringt,scatteringx,scatteringy,scatteringz,c1,Collisionplots,c2,Angleplots);
 
 	}
 
