@@ -60,13 +60,13 @@ struct parton {
 	float px;
 	float py;
 	float pz;
-
+// Parton scattering angle
+	float sangle;
 // Parton initial location
 	float x;
 	float y;
 	float z;
 	float t;
-
 //Parton mass in GeV
 	float m;
 
@@ -110,6 +110,31 @@ void myText(Double_t x,Double_t y,Color_t color,const char *text,Double_t tsize 
 	l.SetTextColor(color);
 	if (angle > 0) l.SetTextAngle(angle);
 	l.DrawLatex(x,y,text);
+}
+
+// This function calculates the scattering angle and includes the Lorentz transformation into the CoM.
+void getAngle(float benergy1, float benergy2, float benergy3, float benergy4, TLorentzVector vb1, TLorentzVector vb2, TLorentzVector vb3, TLorentzVector vb4, TLorentzVector com, float parton1_momenta_initial[], float parton2_momenta_initial[], float parton1_mass_initial, float parton2_mass_initial, float &parton1_angle, float &parton2_angle, double parton1_spacetime_initial[], double parton2_spacetime_initial[], float parton1_final_momenta[], float parton2_final_momenta[], float parton1_final_mass, float parton2_final_mass, double parton1_final_spacetime[], double parton2_final_spacetime[]) 
+{
+	benergy1 = TMath::Sqrt(pow(parton1_momenta_initial[0],2) + pow(parton1_momenta_initial[1],2) + pow(parton1_momenta_initial[2],2) + pow(parton1_mass_initial,2));
+	benergy2 = TMath::Sqrt(pow(parton2_momenta_initial[0],2) + pow(parton2_momenta_initial[1],2) + pow(parton2_momenta_initial[2],2) + pow(parton2_mass_initial,2));
+	benergy3 = TMath::Sqrt(pow(parton1_final_momenta[0],2) + pow(parton1_final_momenta[1],2) + pow(parton1_final_momenta[2],2) + pow(parton1_final_mass,2));
+	benergy4 = TMath::Sqrt(pow(parton2_final_momenta[0],2) + pow(parton2_final_momenta[1],2) + pow(parton2_final_momenta[2],2) + pow(parton2_final_mass,2));
+
+	vb1.SetPxPyPzE(parton1_momenta_initial[0],parton1_momenta_initial[1],parton1_momenta_initial[2],benergy1);
+	vb2.SetPxPyPzE(parton2_momenta_initial[0],parton2_momenta_initial[1],parton2_momenta_initial[2],benergy2);
+	vb3.SetPxPyPzE(parton1_final_momenta[0],parton1_final_momenta[1],parton1_final_momenta[2],benergy3);
+	vb4.SetPxPyPzE(parton2_final_momenta[0],parton2_final_momenta[1],parton2_final_momenta[2],benergy4);
+
+	com = vb1 + vb2;
+
+	vb1.Boost(-com.BoostVector());
+	vb2.Boost(-com.BoostVector());
+	vb3.Boost(-com.BoostVector());
+	vb4.Boost(-com.BoostVector());
+
+
+	parton1_angle = vb1.Angle(vb3.Vect());
+	parton2_angle = vb2.Angle(vb4.Vect());
 }
 
 // This function is used to determine the stage that will be used for each part of the calculation.
@@ -233,48 +258,36 @@ void angleDraw(int &actualevent, float &initialpx, float &initialpy, float &init
 	tell3->Draw("same");
 
 	if (scatteringn > 0) {
-		float energy2 = TMath::Sqrt(pow(initialpx,2) + pow(initialpy,2) + pow(initialpz,2) + pow(initialmass,2));
-		float energy3 = 0;
-		float energy4 = 0;
-
-		TLorentzVector v1(initialpx,initialpy,initialpz,energy2);
 
 		for (int j = 0; j < v.size(); j++) {
 
 			if (j == 0) {
-				energy3 = TMath::Sqrt(pow(scatteringpx[j],2) + pow(scatteringpy[j],2) + pow(scatteringpz[j],2) + pow(initialmass,2));
-				TLorentzVector v2(scatteringpx[j],scatteringpy[j],scatteringpz[j],energy3);
 
-				scatangle = v1.Angle(v2.Vect());
+				scatangle = v[j].sangle;
 			}
 
 			if (j > 0) {
 
-				energy3 = TMath::Sqrt(pow(scatteringpx[j],2) + pow(scatteringpy[j],2) + pow(scatteringpz[j],2) + pow(initialmass,2));
-				TLorentzVector v3(scatteringpx[j],scatteringpy[j],scatteringpz[j],energy3);
-				energy4 = TMath::Sqrt(pow(scatteringpx[j+1],2) + pow(scatteringpy[j+1],2) + pow(scatteringpz[j+1],2) + pow(initialmass,2));
-				TLorentzVector v4(scatteringpx[j+1],scatteringpy[j+1],scatteringpz[j+1],energy4);
-
-				scatangle = v3.Angle(v4.Vect());
+				scatangle = v[j].sangle;
 			}
 
-			if (scatangle < (Pi/6)) {
+			if (v[j].sangle < (Pi/6)) {
 				tell3->SetFillColor(kBlue-9);
 				tell3->Draw("same");
 			}
 
-			if (scatangle > (Pi/6) && scatangle < (Pi/3)) {
+			if (v[j].sangle > (Pi/6) && scatangle < (Pi/3)) {
 				tell3->SetFillColor(kGreen+3);
 				tell3->Draw("same");
 			}
 
-			if (scatangle > (Pi/3) && scatangle < (Pi/2)) {
-				tell3->SetFillColor(kOrange+7);
+			if (v[j].sangle > (Pi/3) && scatangle < (Pi/2)) {
+				tell3->SetFillColor(kOrange-2);
 				tell3->Draw("same");
 			}
 
-			if (scatangle > (Pi/2)) {
-				tell3->SetFillColor(kRed);
+			if (v[j].sangle > (Pi/2)) {
+				tell3->SetFillColor(kPink-9);
 				tell3->Draw("same");
 			}
 		}
@@ -396,8 +409,6 @@ void processEvent(int &actualevent, int &partonid, float &initialpx, float &init
 			counter1 = counter1;
 			counter1++;
 
-			angleDraw(actualevent,initialpx,initialpy,initialpz,formationt,initialx,initialy,initialmass,scatteringn,scatteringpx,scatteringpy,scatteringpz,scatteringt,counter1,v,c2,Angleplots);
-
 			// This statement is to ensure that the tree is only filled once for all partons.
 			if (counter1 <= EventPartons.size()) {
 				tree->Fill();
@@ -406,11 +417,13 @@ void processEvent(int &actualevent, int &partonid, float &initialpx, float &init
 				continue;
 			}
 
+			angleDraw(actualevent,initialpx,initialpy,initialpz,formationt,initialx,initialy,initialmass,scatteringn,scatteringpx,scatteringpy,scatteringpz,scatteringt,counter1,v,c2,Angleplots);
+
 			singleFrameDraw(actualevent,initialpx,initialpy,initialx,initialy,scatteringn,c1,counter1,Collisionplots);
 
 		}
 
-		draw(xvals, yvals, iterate, goesboom, actualevent);
+		//draw(xvals, yvals, iterate, goesboom, actualevent);
 
 
 		xvals.clear();
@@ -540,10 +553,12 @@ void EventAnimation(void) {
 		int partonindex2;
 		// Initial parton information
 		int parton1_id_initial;
+		float parton1_angle;
 		float parton1_momenta_initial[3];
 		float parton1_mass_initial;
 		double parton1_spacetime_initial[4];
 		int parton2_id_initial;
+		float parton2_angle;
 		float parton2_momenta_initial[3];
 		float parton2_mass_initial;
 		double parton2_spacetime_initial[4];
@@ -556,6 +571,17 @@ void EventAnimation(void) {
 		float parton2_final_momenta[3];
 		float parton2_final_mass;
 		double parton2_final_spacetime[4];
+
+		float benergy1;
+		float benergy2;
+		float benergy3;
+		float benergy4;
+
+		TLorentzVector com;
+		TLorentzVector vb1;
+		TLorentzVector vb2;
+		TLorentzVector vb3;
+		TLorentzVector vb4;
 
 		// This is where the evolution file is opened each time.
 		myEvolutionFile.open("parton-collisionsHistory.dat");
@@ -589,12 +615,15 @@ void EventAnimation(void) {
 
 					myEvolutionFile >> parton2_final_id >> parton2_final_momenta[0] >> parton2_final_momenta[1] >> parton2_final_momenta[2] >> parton2_final_mass >> parton2_final_spacetime[0] >> parton2_final_spacetime[1] >> parton2_final_spacetime[2] >> parton2_final_spacetime[3];
 
+					getAngle(benergy1,benergy2,benergy3,benergy4,vb1,vb2,vb3,vb4,com,parton1_momenta_initial,parton2_momenta_initial,parton1_mass_initial,parton2_mass_initial,parton1_angle,parton2_angle,parton1_spacetime_initial,parton2_spacetime_initial,parton1_final_momenta,parton2_final_momenta,parton1_final_mass,parton2_final_mass,parton1_final_spacetime,parton2_final_spacetime);
+
 					parton part1;
 					part1.evtN = evt;
 					part1.pID = parton1_final_id;
 					part1.px = parton1_final_momenta[0];
 					part1.py = parton1_final_momenta[1];
 					part1.pz = parton1_final_momenta[2];
+					part1.sangle = parton1_angle;
 					part1.x = parton1_final_spacetime[0];
 					part1.y = parton1_final_spacetime[1];
 					part1.z = parton1_final_spacetime[2];
@@ -607,6 +636,7 @@ void EventAnimation(void) {
 					part2.px = parton2_final_momenta[0];
 					part2.py = parton2_final_momenta[1];
 					part2.pz = parton2_final_momenta[2];
+					part2.sangle = parton2_angle;
 					part2.x = parton2_final_spacetime[0];
 					part2.y = parton2_final_spacetime[1];
 					part2.z = parton2_final_spacetime[2];
