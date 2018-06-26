@@ -61,7 +61,7 @@ struct parton {
 	float py;
 	float pz;
 // Parton scattering angle
-	float sangle;
+  //float sangle;
 // Parton initial location
 	float x;
 	float y;
@@ -142,7 +142,7 @@ int getStage(float actualtime, vector<parton> v) {
 
 	if (actualtime < v[0].t) return -999;
 
-	for (int i = 0; i < v.size(); i++) {
+	for (unsigned int i = 0; i < v.size(); i++) {
 
 		if (actualtime > v[i].t && actualtime <= v[i+1].t) {
 
@@ -174,7 +174,7 @@ void draw(vector<float> x, vector<float> y, int iterate, vector<int> bigboom, in
 	hTimestep->Draw();
 
 	// This loop is used to make the ellipse shape for the partons.
-	for (int j = 0; j < x.size(); j++) {
+	for (unsigned int j = 0; j < x.size(); j++) {
 		TEllipse *tell = new TEllipse(x[j], y[j],0.09,0.09);
 		tell->SetFillColor(kBlue);
 		tell->Draw("same");
@@ -199,7 +199,7 @@ void draw(vector<float> x, vector<float> y, int iterate, vector<int> bigboom, in
 }
 
 // This function is used to make a snapshot of all partons at their initial positions and show their momentum vectors.
-void singleFrameDraw(int &actualevent, float &initialpx, float &initialpy, float &initialx, float &initialy, int &scatteringn, TCanvas* c1, int counter1, TH2F* Collisionplots) {
+void singleFrameDraw(int &actualevent, float &initialpx, float &initialpy, float &initialx, float &initialy, int &scatteringn, TCanvas* c1, unsigned int counter1, TH2F* Collisionplots) {
 
 	c1->cd();
 
@@ -219,7 +219,7 @@ void singleFrameDraw(int &actualevent, float &initialpx, float &initialpy, float
 	ar1->Draw();
 	ar1->SetLineWidth(2);
 
-	for (int i = 0; i < EventPartons.size(); i++) {
+	for (unsigned int i = 0; i < EventPartons.size(); i++) {
 
 		TEllipse *tell2 = new TEllipse(initialx, initialy,0.09,0.09);
 
@@ -240,7 +240,7 @@ void singleFrameDraw(int &actualevent, float &initialpx, float &initialpy, float
 }
 
 // This function will show what scattering angle applies to what parton.
-void angleDraw(int &actualevent, float &initialpx, float &initialpy, float &initialpz, float &formationt, float &initialx, float &initialy, float &initialmass, int &scatteringn, float scatteringpx[], float scatteringpy[], float scatteringpz[], float scatteringt[], int counter1, vector<parton> v, TCanvas* c2, TH2F* Angleplots) {
+void angleDraw(int &actualevent, float &initialpx, float &initialpy, float &initialpz, float &formationt, float &initialx, float &initialy, float &initialmass, int &scatteringn, float scatteringpx[], float scatteringpy[], float scatteringpz[], float scatteringt[], unsigned int counter1, vector<parton> v, TCanvas* c2, TH2F* Angleplots) {
 	c2->cd();
 
 	if (counter1 == 1) {
@@ -259,7 +259,7 @@ void angleDraw(int &actualevent, float &initialpx, float &initialpy, float &init
 
 	if (scatteringn > 0) {
 
-		for (int j = 0; j < v.size(); j++) {
+		for (unsigned int j = 0; j < v.size(); j++) {
 
 			if (j == 0) {
 
@@ -308,7 +308,7 @@ void calculatePosition (float actualtime, vector<parton> v, float &xt, float &yt
 	float x0, y0;
 
 	// The v vector in this loop is looking at the scattering's for each individual parton so the size varies in length.
-	for (int i = 0; i < v.size(); i++) {
+	for (unsigned int i = 0; i < v.size(); i++) {
 		// Calculation of the velocity at each stage.
 		float energy = TMath::Sqrt(pow(v[i].px,2) + pow(v[i].py,2) + pow(v[i].pz,2) + pow(v[i].m,2));
 		TLorentzVector ev(v[i].px, v[i].py, v[i].pz, energy);
@@ -356,8 +356,8 @@ void calculatePosition (float actualtime, vector<parton> v, float &xt, float &yt
 			scatteringpy[i-1] = v[i].py;
 			scatteringpz[i-1] = v[i].pz;
 			scatteringt[i-1] = v[i].t;
-			scatteringx[i-1] = xposition[i];
-			scatteringy[i-1] = yposition[i];
+			scatteringx[i-1] = v[i].x; //Updated 6/19/18 to create a specific tree
+			scatteringy[i-1] = v[i].y; //Updated 6/19/18 to create a specific tree
 			scatteringz[i-1] = v[i].z;
 		}
 	}
@@ -383,18 +383,18 @@ void calculatePosition (float actualtime, vector<parton> v, float &xt, float &yt
 // This function will loop over each parton and then calculate the positions at every given moment in time. 
 void processEvent(int &actualevent, int &partonid, float &initialpx, float &initialpy, float &initialpz, float &formationt, float &initialx, float &initialy, float &initialz, float &initialmass, int &scatteringn, float scatteringpx[], float scatteringpy[], float scatteringpz[], float scatteringt[], float scatteringx[], float scatteringy[], float scatteringz[],TCanvas* c1, TH2F* Collisionplots, TCanvas* c2, TH2F* Angleplots) {
 	
-	int iterate = 0;
+	unsigned int iterate = 0;
 	// This counter used to prevent the tree from being filled more than it should be.
-	int counter1 = 0;
+	unsigned int counter1 = 0;
 
 	// This loops through each time.
-	for (int i = 0; i < NStep; i++) {
+	for (unsigned int i = 0; i < NStep; i++) {
 
 		float actualtime = i * dt;
 
 		// Put Parton Loop here. At each timestep each parton is looped over. 
 		
-		for (int p = 0; p < EventPartons.size(); p++) {
+		for (unsigned int p = 0; p < EventPartons.size(); p++) {
 
 			std::vector<parton> v = EventPartons[p];
 
@@ -423,7 +423,7 @@ void processEvent(int &actualevent, int &partonid, float &initialpx, float &init
 
 		}
 
-		//draw(xvals, yvals, iterate, goesboom, actualevent);
+		draw(xvals, yvals, iterate, goesboom, actualevent);
 
 
 		xvals.clear();
@@ -439,9 +439,10 @@ void processEvent(int &actualevent, int &partonid, float &initialpx, float &init
 // This will be my attempt to read in the files that I will be using. 
 void EventAnimation(void) {
 
-	f1 = new TFile("Multievent_AMPT_File_Tree.root", "RECREATE");
+	f1 = new TFile("AMPT_TestTree.root", "RECREATE");
 
-	Int_t scatteringn = 1000;
+	const Int_t maxArrayLength = 10000;
+	Int_t scatteringn = 10000;
 	Int_t actualevent;
 	Int_t partonid;
 	Float_t initialpx;
@@ -452,15 +453,15 @@ void EventAnimation(void) {
 	Float_t initialy;
 	Float_t initialz;
 	Float_t initialmass;
-	Float_t scatteringpx[scatteringn];
-	Float_t scatteringpy[scatteringn];
-	Float_t scatteringpz[scatteringn];
-	Float_t scatteringt[scatteringn];
-	Float_t scatteringx[scatteringn];
-	Float_t scatteringy[scatteringn];
-	Float_t scatteringz[scatteringn];
+	Float_t scatteringpx[maxArrayLength];
+	Float_t scatteringpy[maxArrayLength];
+	Float_t scatteringpz[maxArrayLength];
+	Float_t scatteringt[maxArrayLength];
+	Float_t scatteringx[maxArrayLength];
+	Float_t scatteringy[maxArrayLength];
+	Float_t scatteringz[maxArrayLength];
 
-	tree = new TTree("tree", "An Orange Tree");
+	tree = new TTree("tree", "An Apple Tree");
 	tree->Branch("event_number",&actualevent,"event_number/I");
 	tree->Branch("parton_id",&partonid,"parton_id/I");
 	tree->Branch("initial_px",&initialpx,"initial_px/F");
@@ -482,7 +483,7 @@ void EventAnimation(void) {
 	ifstream myInitialFileInfo;
 	ifstream myEvolutionFile;
 
-	myInitialFileInfo.open("parton-initial-afterPropagation.dat");
+	myInitialFileInfo.open("/direct/phenix+u/erbo8479/AMPT/Ampt-v1.26t5-v2.26t5/ana/parton-initial-afterPropagation.dat");
 
 	if (!myInitialFileInfo) {
 	// This will let me know if the file fails to open and specifically which file.
@@ -504,7 +505,7 @@ void EventAnimation(void) {
 
 		// Information needed to read the event header.
 		int iterationN;
-		int nPartons;
+		unsigned int nPartons;
 		int nBaryons;
 		int nMesons;
 		int particleC;
@@ -516,7 +517,7 @@ void EventAnimation(void) {
 		if (!myInitialFileInfo) break;
 
 		// This loop fills in the initial information for each parton.
-		for (int i = 0; i < nPartons; i++) {
+		for (unsigned int i = 0; i < nPartons; i++) {
 
 			int partID;
 			float momenta[3];
@@ -553,12 +554,12 @@ void EventAnimation(void) {
 		int partonindex2;
 		// Initial parton information
 		int parton1_id_initial;
-		float parton1_angle;
+		//float parton1_angle = 0;
 		float parton1_momenta_initial[3];
 		float parton1_mass_initial;
 		double parton1_spacetime_initial[4];
 		int parton2_id_initial;
-		float parton2_angle;
+		//float parton2_angle = 0;
 		float parton2_momenta_initial[3];
 		float parton2_mass_initial;
 		double parton2_spacetime_initial[4];
@@ -584,7 +585,7 @@ void EventAnimation(void) {
 		TLorentzVector vb4;
 
 		// This is where the evolution file is opened each time.
-		myEvolutionFile.open("parton-collisionsHistory.dat");
+		myEvolutionFile.open("/direct/phenix+u/erbo8479/AMPT/Ampt-v1.26t5-v2.26t5/ana/parton-collisionsHistory.dat");
 
 		if (!myEvolutionFile) {
 		// As before this will let me know if this specific file fails to open.
@@ -615,7 +616,7 @@ void EventAnimation(void) {
 
 					myEvolutionFile >> parton2_final_id >> parton2_final_momenta[0] >> parton2_final_momenta[1] >> parton2_final_momenta[2] >> parton2_final_mass >> parton2_final_spacetime[0] >> parton2_final_spacetime[1] >> parton2_final_spacetime[2] >> parton2_final_spacetime[3];
 
-					getAngle(benergy1,benergy2,benergy3,benergy4,vb1,vb2,vb3,vb4,com,parton1_momenta_initial,parton2_momenta_initial,parton1_mass_initial,parton2_mass_initial,parton1_angle,parton2_angle,parton1_spacetime_initial,parton2_spacetime_initial,parton1_final_momenta,parton2_final_momenta,parton1_final_mass,parton2_final_mass,parton1_final_spacetime,parton2_final_spacetime);
+					//getAngle(benergy1,benergy2,benergy3,benergy4,vb1,vb2,vb3,vb4,com,parton1_momenta_initial,parton2_momenta_initial,parton1_mass_initial,parton2_mass_initial,parton1_angle,parton2_angle,parton1_spacetime_initial,parton2_spacetime_initial,parton1_final_momenta,parton2_final_momenta,parton1_final_mass,parton2_final_mass,parton1_final_spacetime,parton2_final_spacetime);
 
 					parton part1;
 					part1.evtN = evt;
@@ -623,7 +624,7 @@ void EventAnimation(void) {
 					part1.px = parton1_final_momenta[0];
 					part1.py = parton1_final_momenta[1];
 					part1.pz = parton1_final_momenta[2];
-					part1.sangle = parton1_angle;
+					//part1.sangle = parton1_angle;
 					part1.x = parton1_final_spacetime[0];
 					part1.y = parton1_final_spacetime[1];
 					part1.z = parton1_final_spacetime[2];
@@ -636,7 +637,7 @@ void EventAnimation(void) {
 					part2.px = parton2_final_momenta[0];
 					part2.py = parton2_final_momenta[1];
 					part2.pz = parton2_final_momenta[2];
-					part2.sangle = parton2_angle;
+					//part2.sangle = parton2_angle;
 					part2.x = parton2_final_spacetime[0];
 					part2.y = parton2_final_spacetime[1];
 					part2.z = parton2_final_spacetime[2];
